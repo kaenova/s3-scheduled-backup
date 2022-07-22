@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"mime/multipart"
@@ -30,6 +29,7 @@ type S3ObjectI interface {
 	GetObjectPresigned(objectPath string) (string, error)
 	UploadFileMultipart(file multipart.File) (objectOutput, error)
 	UploadFileFromPath(filePath string) (objectOutput, error)
+	UploadFileFromPathNamed(fileName, filePath string) (objectOutput, error)
 	DeleteObject(objectPath string) error
 	GetObjectPath(fullPathEndpoint string) string
 }
@@ -256,7 +256,6 @@ func (s *S3Object) getFileExtension(data []byte) (string, error) {
 	case "application/octet-stream":
 		return "", errors.New("unsupported file type")
 	}
-	fmt.Println(fileExtension)
 	return fileExtension, nil
 }
 

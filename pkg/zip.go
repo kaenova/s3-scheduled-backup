@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -71,7 +70,7 @@ func FoldersOneLevel(root string) ([]string, error) {
 	var folders []string
 	dir, err := ioutil.ReadDir(root)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	for _, f := range dir {
