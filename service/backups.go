@@ -52,7 +52,7 @@ func (b *BackupService) StartBlocking() {
 
 	s := gocron.NewScheduler(tz)
 
-	s.Cron(CRON_MINUTE).Do(b.backup)
+	s.Cron(CRON_MIDNIGHT).Do(b.backup)
 
 	b.Log.Info("Schedule started")
 	s.StartBlocking()
@@ -66,6 +66,7 @@ func (b *BackupService) backup() {
 }
 
 func (b *BackupService) backupSingleFolder(folder string) {
+	// <foldername>--<Year-Month-Date>
 	currentTime := time.Now()
 	fileName := fmt.Sprintf("%s--%s", folder, currentTime.Format("2006-01-02"))
 
@@ -83,7 +84,6 @@ func (b *BackupService) backupSingleFolder(folder string) {
 		os.Remove(zipFolderPath)
 	}()
 
-	// <foldername>--<Year-Month-Date>
 	_, err = b.S3.UploadFileFromPathNamed(fileName, zipFolderPath)
 	if err != nil {
 		b.Log.Warning("Fail to upload " + folder)
