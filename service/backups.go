@@ -15,6 +15,9 @@ const CRON_MIDNIGHT = "59 23 * * *"
 // Do every minute
 const CRON_MINUTE = "*/1 * * * *"
 
+// Do every 5 minute
+const CRON_5_MINUTE = "*/5 * * * *"
+
 type BackupService struct {
 	Path    string
 	S3      pkg.S3ObjectI
@@ -53,6 +56,9 @@ func (b *BackupService) StartBlocking() {
 	s := gocron.NewScheduler(tz)
 
 	s.Cron(CRON_MIDNIGHT).Do(b.backup)
+	s.Cron(CRON_5_MINUTE).Do(func() {
+		b.Log.Info("Health check: Normal")
+	})
 
 	b.Log.Info("Schedule started")
 	s.StartBlocking()
