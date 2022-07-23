@@ -41,11 +41,11 @@ type objectOutput struct {
 }
 
 // Create new instace of S3 Object with MiniIO APIs
-// This also will create a "./tmp" folder for uploading from memory file (multipart)
+// This also will create a "./temp" folder for uploading from memory file (multipart)
 func NewS3Object(endpoint, accessKeyID, secretAcessKey, bucketName string, useSSL bool) (S3ObjectI, error) {
 	ctx := context.Background()
 
-	err := os.Mkdir("./tmp", 0644)
+	err := os.Mkdir("./temp", 0644)
 	if err != nil && !errors.Is(err, os.ErrExist) {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ func (s *S3Object) createTempFile(data []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	tempFile := "./tmp/" + objectPathName
+	tempFile := "./temp/" + objectPathName
 	err = ioutil.WriteFile(tempFile, data, 0644)
 	if err != nil {
 		return "", err
