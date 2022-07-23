@@ -55,7 +55,7 @@ func (b *BackupService) StartBlocking() {
 
 	s := gocron.NewScheduler(tz)
 
-	s.Cron(CRON_MINUTE).Do(b.backup)
+	s.Cron(CRON_MIDNIGHT).Do(b.backup)
 	s.Cron(CRON_5_MINUTE).Do(func() {
 		b.Log.Info("Health check: Normal")
 	})
