@@ -40,8 +40,7 @@ func NewBackupService(path string, maxRollbackDay int, s3 pkg.S3ObjectI, log pkg
 func (b *BackupService) StartBlocking() {
 	tz, err := time.LoadLocation("Asia/Jakarta")
 	if err != nil {
-		b.Log.Error("Fail to load timezone")
-		os.Exit(1)
+		b.Log.Fatal("Fail to load timezone")
 	}
 
 	s := gocron.NewScheduler(tz)
