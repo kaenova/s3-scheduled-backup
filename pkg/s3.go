@@ -31,6 +31,7 @@ type S3ObjectI interface {
 	UploadFileFromPath(filePath string) (objectOutput, error)
 	UploadFileFromPathNamed(fileName, filePath string) (objectOutput, error)
 	DeleteObject(objectPath string) error
+	ListObjectParentDir() []string
 	GetObjectPath(fullPathEndpoint string) string
 }
 
@@ -151,6 +152,17 @@ func (s *S3Object) GetObjectPath(fullPathEndpoint string) string {
 		return fullPathEndpoint
 	}
 	return fullPathEndpoint[idx+len(targetString):]
+}
+
+func (s *S3Object) ListObjectParentDir() []string {
+	var obj []string
+	objectCh := s.client.ListObjects(s.ctx, s.bucketName, minio.ListObjectsOptions{})
+	for object := range objectCh {
+		if object.Err == nil {
+			obj = append(obj, object.Key)
+		}
+	}
+	return obj
 }
 
 // Delete based on object path or full path
