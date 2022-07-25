@@ -18,7 +18,7 @@ type BackupService struct {
 
 type BackupServiceI interface {
 	StartBlocking()
-	RegisterCron(scheduler *gocron.Scheduler)
+	RegisterScheduler(scheduler *gocron.Scheduler)
 }
 
 func NewBackupService(path string, s3 pkg.S3ObjectI, log pkg.CustomLoggerI) BackupServiceI {
@@ -44,13 +44,13 @@ func (b *BackupService) StartBlocking() {
 
 	s := gocron.NewScheduler(tz)
 
-	b.RegisterCron(s)
+	b.RegisterScheduler(s)
 
 	b.Log.Info("Schedule started")
 	s.StartBlocking()
 }
 
-func (b *BackupService) RegisterCron(scheduler *gocron.Scheduler) {
+func (b *BackupService) RegisterScheduler(scheduler *gocron.Scheduler) {
 	scheduler.Cron(pkg.CRON_MIDNIGHT).Do(b.backup)
 	scheduler.Cron(pkg.CRON_MINUTE).Do(func() {
 		b.Log.Info("Backup service is healthy")
