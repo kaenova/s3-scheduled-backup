@@ -21,4 +21,19 @@ S3_USE_SSL=
 
 This application will bind to your `/var/lib/docker/volumes` and will zips, and upload every child directory from that path to S3 storage.
 
+To run in docker mode:
+```sh
+docker run -d -it \
+--name s3-schedule-backup \
+--mount type=bind,source=/var/lib/docker/volumes,target=/dockervol,readonly \
+-e MODE=docker \
+-e MAXIMUM_BACKUP_WINDOW=0 \
+-e S3_ENDPOINT=your.s3endpoint.com \
+-e S3_BUCKET_NAME=bucket-name \
+-e S3_ACCESS_KEY=AAABBBCCC \
+-e S3_SECRET_KEY=AAABBBCCC \
+-e S3_USE_SSL=true \
+kaenova/s3-schedule-backup:latest
+```
+
 **NOTE**: This application only tested on Ubuntu >20.04 system.

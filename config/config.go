@@ -80,12 +80,13 @@ func MakeBackupConfig(log pkg.CustomLoggerI, app ApplicationConfig) BackupConfig
 		window = 0
 	}
 
-	path := os.Getenv("PATH_BACKUP")
-	if path == "" {
-		path = pkg.InputString("Input a parent folder for the children folder to be backed up: ")
-	}
-
-	if app.Mode == DOCKER_MODE {
+	var path string
+	if app.Mode != DOCKER_MODE {
+		path = os.Getenv("PATH_BACKUP")
+		if path == "" {
+			path = pkg.InputString("Input a parent folder for the children folder to be backed up: ")
+		}
+	} else {
 		path = DOCKER_VOL_PATH
 	}
 
