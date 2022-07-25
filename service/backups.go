@@ -74,7 +74,7 @@ func (b *BackupService) backupSingleFolder(folder string) {
 	zipFolderPath := "./temp/" + fileName + ".zip"
 	err := pkg.ZipSource(sourceFolderPath, zipFolderPath)
 	if err != nil {
-		b.Log.Warning("Cannot Backup Folder " + folder)
+		b.Log.Error("Cannot Backup Folder " + folder + " " + err.Error())
 		return
 	}
 
@@ -85,7 +85,7 @@ func (b *BackupService) backupSingleFolder(folder string) {
 
 	_, err = b.S3.UploadFileFromPathNamed(fileName, zipFolderPath)
 	if err != nil {
-		b.Log.Warning("Fail to upload " + folder)
+		b.Log.Error("Fail to upload " + folder)
 		return
 	}
 	b.Log.Info("Success upload folder " + folder)

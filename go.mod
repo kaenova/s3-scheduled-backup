@@ -3,6 +3,7 @@ module github.com/kaenova/s3-scheduled-backup
 go 1.18
 
 require (
+	github.com/go-co-op/gocron v1.15.1
 	github.com/google/uuid v1.1.1
 	github.com/minio/minio-go/v7 v7.0.31
 	github.com/stretchr/testify v1.8.0
@@ -11,7 +12,6 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
-	github.com/go-co-op/gocron v1.15.1 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/jtolds/gls v4.20.0+incompatible // indirect
