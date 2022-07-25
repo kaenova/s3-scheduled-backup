@@ -41,6 +41,10 @@ type objectOutput struct {
 	Endpoint     string
 }
 
+var (
+	ErrBucketNotExists = errors.New("bucket does not exists, please check your configuration")
+)
+
 // Create new instace of S3 Object with MiniIO APIs
 // This also will create a "./temp" folder for uploading from memory file (multipart)
 func NewS3Object(endpoint, accessKeyID, secretAcessKey, bucketName string, useSSL bool) (S3ObjectI, error) {
@@ -64,7 +68,7 @@ func NewS3Object(endpoint, accessKeyID, secretAcessKey, bucketName string, useSS
 		return &S3Object{}, err
 	}
 	if !exists {
-		return &S3Object{}, errors.New("bucket not exists, please contact admin")
+		return &S3Object{}, ErrBucketNotExists
 	}
 
 	return &S3Object{
@@ -253,16 +257,12 @@ func (s *S3Object) getFileExtension(data []byte) (string, error) {
 	switch mimeType {
 	case "image/jpeg":
 		fileExtension = fileExtension + ".jpg"
-		break
 	case "image/png":
 		fileExtension = fileExtension + ".png"
-		break
 	case "application/pdf":
 		fileExtension = fileExtension + ".pdf"
-		break
 	case "video/mp4":
 		fileExtension = fileExtension + ".mp4"
-		break
 	case "application/zip":
 		fileExtension = fileExtension + ".zip"
 	case "application/octet-stream":

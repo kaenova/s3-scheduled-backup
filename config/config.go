@@ -10,11 +10,29 @@ import (
 )
 
 type Config struct {
+	ApplicationConfig
 	S3Config
 	BackupConfig
 }
 
+// Mode Constant
+const (
+	DOCKER_MODE = "docker"
+	LOCAL_MODE  = "local"
+)
+
+// Default Docker Mode Path
+const DOCKER_VOL_PATH = "/dockervol"
+
+type ApplicationConfig struct {
+	Mode string
+}
+
 type BackupConfig struct {
+	// Maximum of days of an old backup can be keep. 0 will never delete old backup
+	MaxWindow int
+
+	// Path of the folders that the children will be backed up
 	Path string
 }
 
@@ -33,19 +51,42 @@ func MakeConfig(log pkg.CustomLoggerI) Config {
 		log.Warning("Cannot load .env file")
 	}
 
-	backup := MakeBackupConfig(log)
+	app := MakeApplicationConfig(log)
 	s3 := MakeS3Config(log)
 
+	backup := MakeBackupConfig(log, app)
+
 	return Config{
-		BackupConfig: backup,
-		S3Config:     s3,
+		ApplicationConfig: app,
+		BackupConfig:      backup,
+		S3Config:          s3,
 	}
 }
 
-func MakeBackupConfig(log pkg.CustomLoggerI) BackupConfig {
+func MakeApplicationConfig(log pkg.CustomLoggerI) ApplicationConfig {
+	mode := LOCAL_MODE
+	if os.Getenv("MODE") == DOCKER_MODE {
+		mode = DOCKER_MODE
+	}
+	return ApplicationConfig{
+		Mode: mode,
+	}
+}
+
+func MakeBackupConfig(log pkg.CustomLoggerI, app ApplicationConfig) BackupConfig {
+	window, err := strconv.Atoi(os.Getenv("MAXIMUM_BACKUP_WINDOW"))
+	if err != nil || window == 0 {
+		log.Warning("Maximum time window not detected, defaulted to 0. Which never deleted old backup")
+		window = 0
+	}
+
 	path := os.Getenv("PATH_BACKUP")
 	if path == "" {
 		path = pkg.InputString("Input a parent folder for the children folder to be backed up: ")
+	}
+
+	if app.Mode == DOCKER_MODE {
+		path = DOCKER_VOL_PATH
 	}
 
 	folders, err := pkg.FoldersOneLevel(path)
@@ -53,15 +94,16 @@ func MakeBackupConfig(log pkg.CustomLoggerI) BackupConfig {
 		log.Fatal(err.Error())
 	}
 
-	finalString := "This folder(s) will be backed up every 23:59\n"
-	for i, v := range folders {
-		finalString += fmt.Sprintf("%d. %s\n", i, v)
+	finalString := "These folder(s) will be backed up every 23:59:"
+	for _, v := range folders {
+		finalString += fmt.Sprintf(" %s, ", v)
 	}
 
-	fmt.Println(finalString)
+	log.Info(finalString)
 
 	return BackupConfig{
-		Path: path,
+		MaxWindow: window,
+		Path:      path,
 	}
 }
 
@@ -92,10 +134,7 @@ func MakeS3Config(log pkg.CustomLoggerI) S3Config {
 	config.UseSSL, err = strconv.ParseBool(os.Getenv("S3_USE_SSL"))
 	if err != nil {
 		config.UseSSL = pkg.InputBool("Do you want to use ssl? ([y]/n) : ", func(s string) bool {
-			if s == "n" {
-				return false
-			}
-			return true
+			return s != "n"
 		})
 	}
 

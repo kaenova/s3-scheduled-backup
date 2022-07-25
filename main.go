@@ -21,6 +21,6 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	backuper := service.NewBackupService(config.BackupConfig.Path, 0, s3, log)
+	backuper := service.NewBackupService(config.BackupConfig.Path, config.BackupConfig.MaxWindow, s3, log)
 	backuper.StartBlocking()
 }

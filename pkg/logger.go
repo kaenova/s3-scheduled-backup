@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"io"
 	"log"
 	"os"
 )
@@ -25,11 +26,12 @@ func NewLogger() CustomLoggerI {
 		log.Fatal("Cannot init logger")
 		os.Exit(1)
 	}
+	mw := io.MultiWriter(os.Stdout, file)
 	return &CustomLogger{
-		InfoLogger:    log.New(file, "[INFO] ", log.Ldate|log.Ltime),
-		WarningLogger: log.New(file, "[WARNING] ", log.Ldate|log.Ltime),
-		ErrorLogger:   log.New(file, "[ERROR] ", log.Ldate|log.Ltime),
-		FatalLogger:   log.New(file, "[FATAL] ", log.Ldate|log.Ltime),
+		InfoLogger:    log.New(mw, "[INFO]\t\t", log.Ldate|log.Ltime),
+		WarningLogger: log.New(mw, "[WARNING]\t", log.Ldate|log.Ltime),
+		ErrorLogger:   log.New(mw, "[ERROR]\t\t", log.Ldate|log.Ltime),
+		FatalLogger:   log.New(mw, "[FATAL]\t\t", log.Ldate|log.Ltime),
 	}
 }
 
