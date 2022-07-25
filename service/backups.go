@@ -9,15 +9,6 @@ import (
 	"github.com/kaenova/s3-scheduled-backup/pkg"
 )
 
-// Do every midnight
-const CRON_MIDNIGHT = "59 23 * * *"
-
-// Do every minute
-const CRON_MINUTE = "*/1 * * * *"
-
-// Do every 5 minute
-const CRON_5_MINUTE = "*/5 * * * *"
-
 type BackupService struct {
 	Path    string
 	S3      pkg.S3ObjectI
@@ -27,6 +18,7 @@ type BackupService struct {
 
 type BackupServiceI interface {
 	StartBlocking()
+	RegisterCron(scheduler *gocron.Scheduler)
 }
 
 func NewBackupService(path string, s3 pkg.S3ObjectI, log pkg.CustomLoggerI) BackupServiceI {
@@ -34,9 +26,6 @@ func NewBackupService(path string, s3 pkg.S3ObjectI, log pkg.CustomLoggerI) Back
 	if err != nil {
 		log.Error(err.Error())
 	}
-
-	// Clear terminal screen
-	fmt.Println("\033[2J")
 
 	return &BackupService{
 		Path:    path,
@@ -55,13 +44,17 @@ func (b *BackupService) StartBlocking() {
 
 	s := gocron.NewScheduler(tz)
 
-	s.Cron(CRON_MIDNIGHT).Do(b.backup)
-	s.Cron(CRON_5_MINUTE).Do(func() {
-		b.Log.Info("Health check: Normal")
-	})
+	b.RegisterCron(s)
 
 	b.Log.Info("Schedule started")
 	s.StartBlocking()
+}
+
+func (b *BackupService) RegisterCron(scheduler *gocron.Scheduler) {
+	scheduler.Cron(pkg.CRON_MIDNIGHT).Do(b.backup)
+	scheduler.Cron(pkg.CRON_MINUTE).Do(func() {
+		b.Log.Info("Backup service is healthy")
+	})
 }
 
 func (b *BackupService) backup() {
