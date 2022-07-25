@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -26,6 +27,29 @@ func InputString(text string, validator ...InputValidator) string {
 		}
 	}
 	return strings.TrimSpace(input)
+}
+
+// Return a valid string contrained by InputValidator functions
+func InputInt(text string, validator ...InputValidator) int {
+	inputValidator := func(s string) bool { return true }
+	if len(validator) > 0 {
+		inputValidator = validator[0]
+	}
+
+	var input string
+	var intInput int
+	var err error
+	var done = false
+	for !done {
+		fmt.Println(text)
+		fmt.Scanln(&input)
+		trimmedInput := strings.TrimSpace(input)
+		intInput, err = strconv.Atoi(trimmedInput)
+		if err == nil && len(trimmedInput) != 0 && inputValidator(trimmedInput) {
+			break
+		}
+	}
+	return intInput
 }
 
 // Return a boolean defined by InputValidator

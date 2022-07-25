@@ -1,0 +1,103 @@
+package config
+
+import (
+	"fmt"
+	"os"
+	"strconv"
+
+	"github.com/joho/godotenv"
+	"github.com/kaenova/s3-scheduled-backup/pkg"
+)
+
+type Config struct {
+	S3Config
+	BackupConfig
+}
+
+type BackupConfig struct {
+	Path string
+}
+
+type S3Config struct {
+	Endpoint   string
+	BucketName string
+	AccessKey  string
+	SecretKey  string
+	UseSSL     bool
+}
+
+func MakeConfig(log pkg.CustomLoggerI) Config {
+	// Check dotenv
+	err := godotenv.Load()
+	if err != nil {
+		log.Warning("Cannot load .env file")
+	}
+
+	backup := MakeBackupConfig(log)
+	s3 := MakeS3Config(log)
+
+	return Config{
+		BackupConfig: backup,
+		S3Config:     s3,
+	}
+}
+
+func MakeBackupConfig(log pkg.CustomLoggerI) BackupConfig {
+	path := os.Getenv("PATH_BACKUP")
+	if path == "" {
+		path = pkg.InputString("Input a parent folder for the children folder to be backed up: ")
+	}
+
+	folders, err := pkg.FoldersOneLevel(path)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	finalString := "This folder(s) will be backed up every 23:59\n"
+	for i, v := range folders {
+		finalString += fmt.Sprintf("%d. %s\n", i, v)
+	}
+
+	fmt.Println(finalString)
+
+	return BackupConfig{
+		Path: path,
+	}
+}
+
+func MakeS3Config(log pkg.CustomLoggerI) S3Config {
+	var err error
+	config := S3Config{}
+
+	config.Endpoint = os.Getenv("S3_ENDPOINT")
+	if config.Endpoint == "" {
+		config.Endpoint = pkg.InputString("Input S3 Enpoint (ex. is3.cloudhost.id): ")
+	}
+
+	config.BucketName = os.Getenv("S3_BUCKET_NAME")
+	if config.Endpoint == "" {
+		config.Endpoint = pkg.InputString("Input Bucket Name: ")
+	}
+
+	config.AccessKey = os.Getenv("S3_ACCESS_KEY")
+	if config.Endpoint == "" {
+		config.Endpoint = pkg.InputString("Input Access Key: ")
+	}
+
+	config.SecretKey = os.Getenv("S3_SECRET_KEY")
+	if config.Endpoint == "" {
+		config.Endpoint = pkg.InputString("Input Secret Key: ")
+	}
+
+	config.UseSSL, err = strconv.ParseBool(os.Getenv("S3_USE_SSL"))
+	if err != nil {
+		config.UseSSL = pkg.InputBool("Do you want to use ssl? ([y]/n) : ", func(s string) bool {
+			if s == "n" {
+				return false
+			}
+			return true
+		})
+	}
+
+	return config
+}

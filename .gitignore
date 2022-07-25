@@ -1,2 +1,4 @@
 node_modules
 scheduler_logger.txt
+
+.env

@@ -9,12 +9,14 @@ type CustomLogger struct {
 	InfoLogger    *log.Logger
 	WarningLogger *log.Logger
 	ErrorLogger   *log.Logger
+	FatalLogger   *log.Logger
 }
 
 type CustomLoggerI interface {
 	Error(v ...any)
 	Warning(v ...any)
 	Info(v ...any)
+	Fatal(v ...any)
 }
 
 func NewLogger() CustomLoggerI {
@@ -27,6 +29,7 @@ func NewLogger() CustomLoggerI {
 		InfoLogger:    log.New(file, "[INFO] ", log.Ldate|log.Ltime),
 		WarningLogger: log.New(file, "[WARNING] ", log.Ldate|log.Ltime),
 		ErrorLogger:   log.New(file, "[ERROR] ", log.Ldate|log.Ltime),
+		FatalLogger:   log.New(file, "[FATAL] ", log.Ldate|log.Ltime),
 	}
 }
 
@@ -40,4 +43,10 @@ func (c *CustomLogger) Warning(v ...any) {
 
 func (c *CustomLogger) Info(v ...any) {
 	c.InfoLogger.Println(v...)
+}
+
+// Logs a fatal error and exit the program with code 1
+func (c *CustomLogger) Fatal(v ...any) {
+	c.FatalLogger.Println(v...)
+	os.Exit(1)
 }
