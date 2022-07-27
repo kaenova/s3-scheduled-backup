@@ -51,7 +51,7 @@ func (b *BackupService) StartBlocking() {
 }
 
 func (b *BackupService) RegisterScheduler(scheduler *gocron.Scheduler) {
-	scheduler.Cron(pkg.CRON_MINUTE).Do(b.backup)
+	scheduler.Cron(pkg.CRON_MIDNIGHT).Do(b.backup)
 	scheduler.Cron(pkg.CRON_MINUTE).Do(func() {
 		b.Log.Info("Backup service is healthy")
 	})
