@@ -37,7 +37,7 @@ func TestParseBackupFile(t *testing.T) {
 		}
 		currentTime := time.Now()
 
-		expected = append(expected, fmt.Sprintf("%s--%s.zip", fileName, currentTime.Format("2006-01-02")))
+		expected = append(expected, fmt.Sprintf("%s--%s.zip", fileName, currentTime.Format(pkg.TIME_FORMAT)))
 	}
 
 	// Parse File Name

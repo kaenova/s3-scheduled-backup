@@ -6,12 +6,24 @@ import (
 	"time"
 )
 
-type BackupFolder struct {
+const (
+	// Time Format
+	// <Year-Month-Date>
+	TIME_FORMAT = "2006-01-02"
+
 	// Format Zip Name
 	// <foldername>--<Year-Month-Date>.zip
+	REGEX_FILE_FORMAT = `(.+)--(\d+-\d+-\d+).zip$`
+)
+
+type BackupFolder struct {
 	ZipFileName string
 	FolderName  string
 	Time        BackupTime
+}
+
+func (b *BackupFolder) GenerateFileName() string {
+	return b.FolderName + "--" + b.Time.String()
 }
 
 type BackupTime struct {
@@ -19,14 +31,18 @@ type BackupTime struct {
 }
 
 func (b *BackupTime) String() string {
-	return b.Format("2006-01-02")
+	return b.Time.Format(TIME_FORMAT)
+}
+
+func (b *BackupTime) Unix() int64 {
+	return b.Time.Unix()
 }
 
 func ParseBackupFolder(fileName string) (BackupFolder, error) {
-	re := regexp.MustCompile(`(.+)--(\d+-\d+-\d+).zip$`)
+	re := regexp.MustCompile(REGEX_FILE_FORMAT)
 	res := re.FindStringSubmatch(fileName)
 
-	time, err := time.Parse("2006-01-02", res[2])
+	time, err := time.Parse(TIME_FORMAT, res[2])
 	if err != nil {
 		return BackupFolder{}, err
 	}
@@ -38,8 +54,8 @@ func ParseBackupFolder(fileName string) (BackupFolder, error) {
 	}, nil
 }
 
-func CreateBackupFolder(folderName string) BackupFolder {
-	currentTime := BackupTime{time.Now()}
+func CreateBackupFolder(folderName string, time time.Time) BackupFolder {
+	currentTime := BackupTime{time}
 	fileName := fmt.Sprintf("%s--%s.zip", folderName, currentTime.String())
 
 	return BackupFolder{

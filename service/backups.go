@@ -65,30 +65,64 @@ func (b *BackupService) backup() {
 }
 
 func (b *BackupService) backupSingleFolder(folder string) {
-	err := b.backupFolder(folder)
+	currentTime := time.Now()
+
+	if b.MaxRollbackDay != 0 {
+		b.Log.Info("Will backup folder", folder, "and delete older backup before",
+			currentTime.Add(-time.Hour*24*time.Duration(b.MaxRollbackDay)).Format(pkg.TIME_FORMAT))
+	} else {
+		b.Log.Info("Will backup folder", folder)
+	}
+
+	err := b.backupFolder(folder, currentTime)
 	if err != nil {
 		b.Log.Warning("Won't delete old backup of folder " + folder)
 		return
 	}
-	b.deleteOldBackup(folder)
+
+	b.deleteOldBackup(folder, currentTime)
 }
 
-func (b *BackupService) deleteOldBackup(folder string) {
+func (b *BackupService) deleteOldBackup(folder string, currentTime time.Time) {
+	// Prepare maximum backed up folders
+	maxTime := currentTime.Add(-time.Hour * 24 * time.Duration(b.MaxRollbackDay))
 
+	// Itterate all backed up folder
+	objStr := b.S3.ListObjectParentDir()
+	for _, val := range objStr {
+		obj, err := pkg.ParseBackupFolder(val)
+
+		if err != nil {
+			b.Log.Error("Cannot parse", val)
+			continue
+		}
+
+		// Delete backup if have the same name folder and the time is below max time
+		if (obj.FolderName == folder) && (obj.Time.Unix() < maxTime.Unix()) {
+			err := b.S3.DeleteObject(val)
+
+			if err != nil {
+				b.Log.Error("Cannot delete object", val)
+				continue
+			}
+		}
+	}
+
+	b.Log.Info("Deleting old backup of", folder, "success")
 }
 
-func (b *BackupService) backupFolder(folder string) error {
+func (b *BackupService) backupFolder(folder string, currentTime time.Time) error {
 	// Creates an abstract for folder
-	backupFile := pkg.CreateBackupFolder(folder)
+	backupFile := pkg.CreateBackupFolder(folder, currentTime)
 
-	b.Log.Info("Backuping folder " + backupFile.FolderName)
+	b.Log.Info("Starting zipping folder " + backupFile.FolderName)
 	sourceFolderPath := b.Path + "/" + backupFile.FolderName
 	tempPath := "./temp/" + backupFile.ZipFileName
 
 	// Zip folder
 	err := pkg.ZipSource(sourceFolderPath, tempPath)
 	if err != nil {
-		b.Log.Error("Cannot Backup Folder " + folder + " " + err.Error())
+		b.Log.Error("Cannot zip folder " + backupFile.FolderName + " " + err.Error())
 		return err
 	}
 
@@ -97,7 +131,10 @@ func (b *BackupService) backupFolder(folder string) error {
 		os.Remove(tempPath)
 	}()
 
-	_, err = b.S3.UploadFileFromPathNamed(backupFile.FolderName+"--"+backupFile.Time.String(), tempPath)
+	b.Log.Info("Success zip " + backupFile.ZipFileName + " and trying to upload")
+
+	fileName := backupFile.GenerateFileName()
+	_, err = b.S3.UploadFileFromPathNamed(fileName, tempPath)
 	if err != nil {
 		b.Log.Error("Fail to upload " + backupFile.FolderName)
 		return err
