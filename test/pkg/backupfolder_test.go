@@ -1,65 +1,19 @@
-package pkg
+package pkg_test
 
 import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
-	"os"
 	"testing"
 	"time"
 
+	"github.com/kaenova/s3-scheduled-backup/pkg"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCreateZipFile(t *testing.T) {
-	os.Mkdir("./zip-test", 0777)
-	os.Mkdir("./zip-test/test", 0777)
-	err := ZipSource("./zip-test", "./zip-test.zip")
-	if err != nil {
-		os.Remove("./zip-test")
-		t.Fatal("Error on Zipping: " + err.Error())
-	}
-	_, err = os.Stat("./zip-test.zip")
-	if err != nil {
-		os.Remove("./zip-test")
-		t.Fatal("Error on checking zip-test.zip : " + err.Error())
-	}
-	os.Remove("./zip-test.zip")
-	os.RemoveAll("./zip-test")
-}
-
-func TestWalkDir(t *testing.T) {
-	paths := []string{"a", "b", "c"}
-	expected := []string{}
-	for _, v := range paths {
-		expected = append(expected, v)
-		err := os.MkdirAll("./folder-test/"+v, 0777)
-		if err != nil {
-			t.Fatal("Cannot create test dir")
-		}
-		for _, vi := range paths {
-			err := os.MkdirAll("./folder-test/"+v+"/"+vi, 0777)
-			if err != nil {
-				t.Fatal("Cannot create test dir")
-			}
-		}
-	}
-
-	defer func() {
-		os.RemoveAll("./folder-test")
-	}()
-
-	folders, err := FoldersOneLevel("./folder-test")
-	if err != nil {
-		t.Fatal("Error on Walking Path")
-	}
-
-	assert.Equal(t, expected, folders)
-}
-
 func TestParseBackupFile(t *testing.T) {
 	var expected, parsedFileName []string
-	var parsedFile []BackupFolder
+	var parsedFile []pkg.BackupFolder
 	totalDummy := 10000
 
 	randomString := func(n int) (string, error) {
@@ -88,7 +42,7 @@ func TestParseBackupFile(t *testing.T) {
 
 	// Parse File Name
 	for _, val := range expected {
-		obj, err := ParseBackupFolder(val)
+		obj, err := pkg.ParseBackupFolder(val)
 		if err != nil {
 			t.Fatal(err.Error())
 		}
@@ -99,7 +53,5 @@ func TestParseBackupFile(t *testing.T) {
 	for _, val := range parsedFile {
 		parsedFileName = append(parsedFileName, fmt.Sprintf("%s--%s.zip", val.FolderName, val.Time.String()))
 	}
-	t.Log("Actual:", expected)
-	t.Log("Parsed:", parsedFileName)
 	assert.Equal(t, expected, parsedFileName)
 }
