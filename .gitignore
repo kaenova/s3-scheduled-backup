@@ -1,4 +1,6 @@
 node_modules
 scheduler_logger.txt
 
+test_folder/
+
 .env

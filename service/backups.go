@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -52,7 +51,7 @@ func (b *BackupService) StartBlocking() {
 }
 
 func (b *BackupService) RegisterScheduler(scheduler *gocron.Scheduler) {
-	scheduler.Cron(pkg.CRON_MIDNIGHT).Do(b.backup)
+	scheduler.Cron(pkg.CRON_MINUTE).Do(b.backup)
 	scheduler.Cron(pkg.CRON_MINUTE).Do(func() {
 		b.Log.Info("Backup service is healthy")
 	})
@@ -79,14 +78,15 @@ func (b *BackupService) deleteOldBackup(folder string) {
 }
 
 func (b *BackupService) backupFolder(folder string) error {
-	// <foldername>--<Year-Month-Date>
-	currentTime := time.Now()
-	fileName := fmt.Sprintf("%s--%s", folder, currentTime.Format("2006-01-02"))
+	// Creates an abstract for folder
+	backupFile := pkg.CreateBackupFolder(folder)
 
-	b.Log.Info("Backuping folder " + folder)
-	sourceFolderPath := b.Path + "/" + folder
-	zipFolderPath := "./temp/" + fileName + ".zip"
-	err := pkg.ZipSource(sourceFolderPath, zipFolderPath)
+	b.Log.Info("Backuping folder " + backupFile.FolderName)
+	sourceFolderPath := b.Path + "/" + backupFile.FolderName
+	tempPath := "./temp/" + backupFile.ZipFileName
+
+	// Zip folder
+	err := pkg.ZipSource(sourceFolderPath, tempPath)
 	if err != nil {
 		b.Log.Error("Cannot Backup Folder " + folder + " " + err.Error())
 		return err
@@ -94,14 +94,14 @@ func (b *BackupService) backupFolder(folder string) error {
 
 	// Zip temp cleanup
 	defer func() {
-		os.Remove(zipFolderPath)
+		os.Remove(tempPath)
 	}()
 
-	_, err = b.S3.UploadFileFromPathNamed(fileName, zipFolderPath)
+	_, err = b.S3.UploadFileFromPathNamed(backupFile.FolderName+"--"+backupFile.Time.String(), tempPath)
 	if err != nil {
-		b.Log.Error("Fail to upload " + folder)
+		b.Log.Error("Fail to upload " + backupFile.FolderName)
 		return err
 	}
-	b.Log.Info("Success upload folder " + folder)
+	b.Log.Info("Success upload folder " + backupFile.FolderName)
 	return nil
 }
