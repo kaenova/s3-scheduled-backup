@@ -41,4 +41,4 @@ jobs:
         run: docker build --tag "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:$TAGS" --tag "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:latest" .
 
       - name: Dockerhub Push
-        run: docker push $DOCKER_REPOSITORY --all-tags
+        run: docker push "$DOCKER_REGISTRY/$DOCKER_REPOSITORY" --all-tags
