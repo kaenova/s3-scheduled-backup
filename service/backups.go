@@ -2,6 +2,7 @@ package service
 
 import (
 	"os"
+	"sort"
 	"time"
 
 	"github.com/go-co-op/gocron"
@@ -9,6 +10,7 @@ import (
 )
 
 type BackupService struct {
+	Cron           string
 	Path           string
 	MaxRollbackDay int
 	folders        []string
@@ -21,7 +23,7 @@ type BackupServiceI interface {
 	RegisterScheduler(scheduler *gocron.Scheduler)
 }
 
-func NewBackupService(path string, maxRollbackDay int, s3 pkg.S3ObjectI, log pkg.CustomLoggerI) BackupServiceI {
+func NewBackupService(cronSchedule string, path string, maxRollbackDay int, s3 pkg.S3ObjectI, log pkg.CustomLoggerI) BackupServiceI {
 	folders, err := pkg.FoldersOneLevel(path)
 	if err != nil {
 		log.Error(err.Error())
@@ -33,6 +35,7 @@ func NewBackupService(path string, maxRollbackDay int, s3 pkg.S3ObjectI, log pkg
 		S3:             s3,
 		folders:        folders,
 		Log:            log,
+		Cron:           cronSchedule,
 	}
 }
 
@@ -51,7 +54,7 @@ func (b *BackupService) StartBlocking() {
 }
 
 func (b *BackupService) RegisterScheduler(scheduler *gocron.Scheduler) {
-	scheduler.Cron(pkg.CRON_MIDNIGHT).Do(b.backup)
+	scheduler.Cron(b.Cron).Do(b.backup)
 	scheduler.Cron(pkg.CRON_MINUTE).Do(func() {
 		b.Log.Info("Backup service is healthy")
 	})
@@ -64,6 +67,7 @@ func (b *BackupService) backup() {
 	}
 }
 
+// NOTE: [WARNING] The file naming convention need to be string sortable by time!
 func (b *BackupService) backupSingleFolder(folder string) {
 	currentTime := time.Now()
 
@@ -84,27 +88,38 @@ func (b *BackupService) backupSingleFolder(folder string) {
 }
 
 func (b *BackupService) deleteOldBackup(folder string, currentTime time.Time) {
-	// Prepare maximum backed up folders
-	maxTime := currentTime.Add(-time.Hour * 24 * time.Duration(b.MaxRollbackDay))
-
-	// Itterate all backed up folder
+	// Itterate all backed up folder and get file that has same FileName
 	objStr := b.S3.ListObjectParentDir()
+	sameFolderName := []string{}
 	for _, val := range objStr {
 		obj, err := pkg.ParseBackupFolder(val)
-
 		if err != nil {
-			b.Log.Error("Cannot parse", val)
+			b.Log.Warning("Cannot parse", val, "with an error", err.Error())
 			continue
 		}
+		if obj.FolderName == folder {
+			sameFolderName = append(sameFolderName, obj.ZipFileName)
+		}
+	}
 
-		// Delete backup if have the same name folder and the time is below max time
-		if (obj.FolderName == folder) && (obj.Time.Unix() < maxTime.Unix()) {
-			err := b.S3.DeleteObject(val)
+	// Check if we need to delete file
+	if len(sameFolderName) <= b.MaxRollbackDay {
+		b.Log.Info("skipping deleting older backup for", folder)
+		return
+	}
 
-			if err != nil {
-				b.Log.Error("Cannot delete object", val)
-				continue
-			}
+	// Sort string with an assumption of the filename are time sortable
+	sort.Strings(sameFolderName)
+
+	// Get objects to be deleted
+	deletedObjects := pkg.GetFirstKString(len(sameFolderName)-b.MaxRollbackDay, sameFolderName)
+
+	// Delete the objects
+	for _, v := range deletedObjects {
+		err := b.S3.DeleteObject(v)
+		if err != nil {
+			b.Log.Error("cannot delete object with an error:", err.Error())
+			return
 		}
 	}
 

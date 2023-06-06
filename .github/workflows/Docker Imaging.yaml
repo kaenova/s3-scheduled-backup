@@ -9,7 +9,7 @@ env:
   TAGS: ${{ github.sha }}
   
   # Please fill this
-  DOCKER_REPOSITORY: kaenova/s3-schedule-backup
+  DOCKER_REPOSITORY: kerjago/s3-schedule-backup
 
 jobs: 
   DockerImagingService:

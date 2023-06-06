@@ -34,6 +34,9 @@ type BackupConfig struct {
 
 	// Path of the folders that the children will be backed up
 	Path string
+
+	// Cron Job
+	Cron string
 }
 
 type S3Config struct {
@@ -95,7 +98,13 @@ func MakeBackupConfig(log pkg.CustomLoggerI, app ApplicationConfig) BackupConfig
 		log.Fatal(err.Error())
 	}
 
-	finalString := "These folder(s) will be backed up every 23:59:"
+	cronTime := os.Getenv("CRON_SCHEDULE")
+	if cronTime == "" {
+		log.Warning("CRON_SCHEDULE environment not specified, using default value of 5 minutes")
+		cronTime = pkg.CRON_5_MINUTE
+	}
+
+	finalString := "These folder(s) will be backed based on this CRON " + cronTime + ": "
 	for _, v := range folders {
 		finalString += fmt.Sprintf(" %s, ", v)
 	}
@@ -105,6 +114,7 @@ func MakeBackupConfig(log pkg.CustomLoggerI, app ApplicationConfig) BackupConfig
 	return BackupConfig{
 		MaxWindow: window,
 		Path:      path,
+		Cron:      cronTime,
 	}
 }
 
