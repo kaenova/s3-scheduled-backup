@@ -12,7 +12,22 @@ env:
   DOCKER_REPOSITORY: kerjago/s3-schedule-backup
 
 jobs: 
+  GoTest:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout latest code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.18'
+
+      - name: Test
+        run: go test -v ./..
+
   DockerImagingService:
+    needs: ["GoTest"]
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout latest code

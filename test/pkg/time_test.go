@@ -9,7 +9,8 @@ import (
 )
 
 func TestNaming(t *testing.T) {
-	backupTime := pkg.BackupTime{time.Now()}
+	currentTime := time.Now()
+	backupTime := pkg.BackupTime{Time: currentTime}
 	t.Log(backupTime.String())
 }
 
