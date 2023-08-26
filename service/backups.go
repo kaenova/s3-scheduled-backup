@@ -154,7 +154,10 @@ func (b *BackupService) backupFolder(folder string, currentTime time.Time) error
 	// Delete file after finishing this functino
 	defer func() {
 		tempFilePath := path.Join(tempPath, fileName)
-		os.Remove(tempFilePath)
+		err := os.Remove(tempFilePath)
+		if err != nil {
+			b.Log.Fatal("Cannot delete temporary file of " + tempFilePath)
+		}
 		b.Log.Info("Removing temporary file " + tempFilePath)
 	}()
 	if err != nil {
