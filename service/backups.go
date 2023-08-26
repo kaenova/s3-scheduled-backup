@@ -143,21 +143,17 @@ func (b *BackupService) backupFolder(folder string, currentTime time.Time) error
 
 	// Zip temp cleanup
 	defer func() {
-		os.Remove(tempPath)
+		err := os.Remove(tempPath)
+		if err != nil {
+			b.Log.Fatal("Cannot delete temporary file of " + tempPath)
+		}
+		b.Log.Info("Removing temporary file " + tempPath)
 	}()
 
 	b.Log.Info("Success zip " + backupFile.ZipFileName + " and trying to upload")
 
 	fileName := backupFile.GenerateFileName()
 	_, err = b.S3.UploadFileFromPathNamed(fileName, tempPath)
-	// Delete file after finishing this functino
-	defer func() {
-		err := os.Remove(fileName)
-		if err != nil {
-			b.Log.Fatal("Cannot delete temporary file of " + fileName)
-		}
-		b.Log.Info("Removing temporary file " + fileName)
-	}()
 	if err != nil {
 		b.Log.Error("Fail to upload " + backupFile.FolderName)
 		return err
