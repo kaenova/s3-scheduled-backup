@@ -2,6 +2,7 @@ package service
 
 import (
 	"os"
+	"path"
 	"sort"
 	"time"
 
@@ -150,6 +151,12 @@ func (b *BackupService) backupFolder(folder string, currentTime time.Time) error
 
 	fileName := backupFile.GenerateFileName()
 	_, err = b.S3.UploadFileFromPathNamed(fileName, tempPath)
+	// Delete file after finishing this functino
+	defer func() {
+		tempFilePath := path.Join(tempPath, fileName)
+		os.Remove(tempFilePath)
+		b.Log.Info("Removing temporary file " + tempFilePath)
+	}()
 	if err != nil {
 		b.Log.Error("Fail to upload " + backupFile.FolderName)
 		return err
