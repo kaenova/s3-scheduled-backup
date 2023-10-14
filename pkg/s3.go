@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -50,7 +51,7 @@ var (
 func NewS3Object(endpoint, accessKeyID, secretAcessKey, bucketName string, useSSL bool) (S3ObjectI, error) {
 	ctx := context.Background()
 
-	err := os.Mkdir("./temp", 0644)
+	err := os.Mkdir("temp", 0644)
 	if err != nil && !errors.Is(err, os.ErrExist) {
 		return nil, err
 	}
@@ -209,7 +210,7 @@ func (s *S3Object) createTempFile(data []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	tempFile := "./temp/" + objectPathName
+	tempFile := filepath.Join("temp", objectPathName)
 	err = ioutil.WriteFile(tempFile, data, 0644)
 	if err != nil {
 		return "", err
@@ -231,7 +232,7 @@ func (s *S3Object) generatePath() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		finalPath = finalPath + path + "/"
+		finalPath = filepath.Join(finalPath, path)
 	}
 	return finalPath, nil
 }

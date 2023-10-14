@@ -2,6 +2,7 @@ package service
 
 import (
 	"os"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -131,8 +132,8 @@ func (b *BackupService) backupFolder(folder string, currentTime time.Time) error
 	backupFile := pkg.CreateBackupFolder(folder, currentTime)
 
 	b.Log.Info("Starting zipping folder " + backupFile.FolderName)
-	sourceFolderPath := b.Path + "/" + backupFile.FolderName
-	tempPath := "./temp/" + backupFile.ZipFileName
+	sourceFolderPath := filepath.Join(b.Path, backupFile.FolderName)
+	tempPath := filepath.Join("temp", backupFile.ZipFileName)
 
 	// Zip folder
 	err := pkg.ZipSource(sourceFolderPath, tempPath)
