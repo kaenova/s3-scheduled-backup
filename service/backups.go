@@ -137,10 +137,6 @@ func (b *BackupService) backupFolder(folder string, currentTime time.Time) error
 
 	// Zip folder
 	err := pkg.ZipSource(sourceFolderPath, tempPath)
-	if err != nil {
-		b.Log.Error("Cannot zip folder " + backupFile.FolderName + " " + err.Error())
-		return err
-	}
 
 	// Zip temp cleanup
 	defer func() {
@@ -150,6 +146,11 @@ func (b *BackupService) backupFolder(folder string, currentTime time.Time) error
 		}
 		b.Log.Info("Removing temporary file " + tempPath)
 	}()
+
+	if err != nil {
+		b.Log.Error("Cannot zip folder " + backupFile.FolderName + " " + err.Error())
+		return err
+	}
 
 	b.Log.Info("Success zip " + backupFile.ZipFileName + " and trying to upload")
 
