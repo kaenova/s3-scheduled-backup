@@ -124,6 +124,7 @@ func MakeBackupConfig(log pkg.CustomLoggerI, app ApplicationConfig) BackupConfig
 	for _, v := range folders {
 		finalString += fmt.Sprintf(" %s, ", v)
 	}
+	log.Info(finalString)
 
 	return BackupConfig{
 		MaxWindow:      window,
