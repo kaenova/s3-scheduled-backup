@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 	"github.com/kaenova/s3-scheduled-backup/pkg"
@@ -37,6 +38,9 @@ type BackupConfig struct {
 
 	// Cron Job
 	Cron string
+
+	// Exclude list
+	ExcludeFolders []string
 }
 
 type S3Config struct {
@@ -104,17 +108,28 @@ func MakeBackupConfig(log pkg.CustomLoggerI, app ApplicationConfig) BackupConfig
 		cronTime = pkg.CRON_5_MINUTE
 	}
 
+	excludeFolderStr := os.Getenv("EXCLUDE_FOLDERS")
+	excludeFolderDirty := strings.Split(excludeFolderStr, ",")
+	excludeFolderClean := []string{}
+	for _, v := range excludeFolderDirty {
+		v = strings.TrimSpace(v)
+		if v != "" {
+			excludeFolderClean = append(excludeFolderClean, v)
+		}
+	}
+
+	folders = pkg.FilterFolders(folders, excludeFolderClean)
+
 	finalString := "These folder(s) will be backed based on this CRON " + cronTime + ": "
 	for _, v := range folders {
 		finalString += fmt.Sprintf(" %s, ", v)
 	}
 
-	log.Info(finalString)
-
 	return BackupConfig{
-		MaxWindow: window,
-		Path:      path,
-		Cron:      cronTime,
+		MaxWindow:      window,
+		Path:           path,
+		Cron:           cronTime,
+		ExcludeFolders: excludeFolderClean,
 	}
 }
 

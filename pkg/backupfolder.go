@@ -69,3 +69,23 @@ func CreateBackupFolder(folderName string, time time.Time) BackupFolder {
 		Time:        currentTime,
 	}
 }
+
+func StringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
+func FilterFolders(folders []string, excludeFolders []string) []string {
+	result := []string{}
+	for _, v := range folders {
+		if !StringInSlice(v, excludeFolders) {
+			result = append(result, v)
+		}
+	}
+
+	return result
+}

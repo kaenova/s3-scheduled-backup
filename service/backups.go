@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-co-op/gocron"
+	"github.com/kaenova/s3-scheduled-backup/config"
 	"github.com/kaenova/s3-scheduled-backup/pkg"
 )
 
@@ -17,6 +18,7 @@ type BackupService struct {
 	folders        []string
 	S3             pkg.S3ObjectI
 	Log            pkg.CustomLoggerI
+	config         config.Config
 }
 
 type BackupServiceI interface {
@@ -24,19 +26,22 @@ type BackupServiceI interface {
 	RegisterScheduler(scheduler *gocron.Scheduler)
 }
 
-func NewBackupService(cronSchedule string, path string, maxRollbackDay int, s3 pkg.S3ObjectI, log pkg.CustomLoggerI) BackupServiceI {
-	folders, err := pkg.FoldersOneLevel(path)
+func NewBackupService(s3 pkg.S3ObjectI, log pkg.CustomLoggerI, config config.Config) BackupServiceI {
+	folders, err := pkg.FoldersOneLevel(config.BackupConfig.Path)
 	if err != nil {
 		log.Error(err.Error())
 	}
 
+	foldersClean := pkg.FilterFolders(folders, config.ExcludeFolders)
+
 	return &BackupService{
-		Path:           path,
-		MaxRollbackDay: maxRollbackDay,
+		Path:           config.BackupConfig.Path,
+		MaxRollbackDay: config.BackupConfig.MaxWindow,
 		S3:             s3,
-		folders:        folders,
+		folders:        foldersClean,
 		Log:            log,
-		Cron:           cronSchedule,
+		Cron:           config.BackupConfig.Cron,
+		config:         config,
 	}
 }
 
@@ -85,10 +90,10 @@ func (b *BackupService) backupSingleFolder(folder string) {
 		return
 	}
 
-	b.deleteOldBackup(folder, currentTime)
+	b.deleteOldBackup(folder)
 }
 
-func (b *BackupService) deleteOldBackup(folder string, currentTime time.Time) {
+func (b *BackupService) deleteOldBackup(folder string) {
 	// Itterate all backed up folder and get file that has same FileName
 	objStr := b.S3.ListObjectParentDir()
 	sameFolderName := []string{}
