@@ -14,7 +14,7 @@ env:
 
 jobs: 
   GoTest:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout latest code
         uses: actions/checkout@v2
@@ -29,7 +29,7 @@ jobs:
 
   DockerImagingService:
     needs: ["GoTest"]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout latest code
         uses: actions/checkout@v2
