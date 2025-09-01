@@ -17,6 +17,12 @@ S3_BUCKET_NAME=
 S3_ACCESS_KEY=
 S3_SECRET_KEY=
 S3_USE_SSL=
+
+# CRON JOB use this website https://crontab.guru/#*/1_*_*_*_*
+CRON_SCHEDULE=
+
+# Exclude Folders (seperated with ",")
+EXCLUDE_FOLDERS=hell-world,yaps,example-excluded-folders
 ``` 
 
 This application will bind to your `/var/lib/docker/volumes` and will zips, and upload every child directory from that path to S3 storage.

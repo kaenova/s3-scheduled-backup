@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"time"
@@ -8,12 +9,12 @@ import (
 
 const (
 	// Time Format
-	// <Year-Month-Date>
-	TIME_FORMAT = "2006-01-02"
+	// <YearMonthDate-HoutMinuteSecond>
+	TIME_FORMAT = "20060102-150405"
 
 	// Format Zip Name
-	// <foldername>--<Year-Month-Date>.zip
-	REGEX_FILE_FORMAT = `(.+)--(\d+-\d+-\d+).zip$`
+	// <foldername>--<YearMonthDate-HoutMinuteSecond>.zip
+	REGEX_FILE_FORMAT = `(.+)--(\d+-\d+).zip$`
 )
 
 type BackupFolder struct {
@@ -42,6 +43,10 @@ func ParseBackupFolder(fileName string) (BackupFolder, error) {
 	re := regexp.MustCompile(REGEX_FILE_FORMAT)
 	res := re.FindStringSubmatch(fileName)
 
+	if len(res) != 3 {
+		return BackupFolder{}, errors.New("not the same fileName " + fileName)
+	}
+
 	time, err := time.Parse(TIME_FORMAT, res[2])
 	if err != nil {
 		return BackupFolder{}, err
@@ -63,4 +68,24 @@ func CreateBackupFolder(folderName string, time time.Time) BackupFolder {
 		FolderName:  folderName,
 		Time:        currentTime,
 	}
+}
+
+func StringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
+func FilterFolders(folders []string, excludeFolders []string) []string {
+	result := []string{}
+	for _, v := range folders {
+		if !StringInSlice(v, excludeFolders) {
+			result = append(result, v)
+		}
+	}
+
+	return result
 }

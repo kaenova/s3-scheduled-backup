@@ -2,18 +2,23 @@ package service
 
 import (
 	"os"
+	"path/filepath"
+	"sort"
 	"time"
 
 	"github.com/go-co-op/gocron"
+	"github.com/kaenova/s3-scheduled-backup/config"
 	"github.com/kaenova/s3-scheduled-backup/pkg"
 )
 
 type BackupService struct {
+	Cron           string
 	Path           string
 	MaxRollbackDay int
 	folders        []string
 	S3             pkg.S3ObjectI
 	Log            pkg.CustomLoggerI
+	config         config.Config
 }
 
 type BackupServiceI interface {
@@ -21,18 +26,22 @@ type BackupServiceI interface {
 	RegisterScheduler(scheduler *gocron.Scheduler)
 }
 
-func NewBackupService(path string, maxRollbackDay int, s3 pkg.S3ObjectI, log pkg.CustomLoggerI) BackupServiceI {
-	folders, err := pkg.FoldersOneLevel(path)
+func NewBackupService(s3 pkg.S3ObjectI, log pkg.CustomLoggerI, config config.Config) BackupServiceI {
+	folders, err := pkg.FoldersOneLevel(config.BackupConfig.Path)
 	if err != nil {
 		log.Error(err.Error())
 	}
 
+	foldersClean := pkg.FilterFolders(folders, config.ExcludeFolders)
+
 	return &BackupService{
-		Path:           path,
-		MaxRollbackDay: maxRollbackDay,
+		Path:           config.BackupConfig.Path,
+		MaxRollbackDay: config.BackupConfig.MaxWindow,
 		S3:             s3,
-		folders:        folders,
+		folders:        foldersClean,
 		Log:            log,
+		Cron:           config.BackupConfig.Cron,
+		config:         config,
 	}
 }
 
@@ -51,7 +60,7 @@ func (b *BackupService) StartBlocking() {
 }
 
 func (b *BackupService) RegisterScheduler(scheduler *gocron.Scheduler) {
-	scheduler.Cron(pkg.CRON_MIDNIGHT).Do(b.backup)
+	scheduler.Cron(b.Cron).Do(b.backup)
 	scheduler.Cron(pkg.CRON_MINUTE).Do(func() {
 		b.Log.Info("Backup service is healthy")
 	})
@@ -64,6 +73,7 @@ func (b *BackupService) backup() {
 	}
 }
 
+// NOTE: [WARNING] The file naming convention need to be string sortable by time!
 func (b *BackupService) backupSingleFolder(folder string) {
 	currentTime := time.Now()
 
@@ -80,31 +90,42 @@ func (b *BackupService) backupSingleFolder(folder string) {
 		return
 	}
 
-	b.deleteOldBackup(folder, currentTime)
+	b.deleteOldBackup(folder)
 }
 
-func (b *BackupService) deleteOldBackup(folder string, currentTime time.Time) {
-	// Prepare maximum backed up folders
-	maxTime := currentTime.Add(-time.Hour * 24 * time.Duration(b.MaxRollbackDay))
-
-	// Itterate all backed up folder
+func (b *BackupService) deleteOldBackup(folder string) {
+	// Itterate all backed up folder and get file that has same FileName
 	objStr := b.S3.ListObjectParentDir()
+	sameFolderName := []string{}
 	for _, val := range objStr {
 		obj, err := pkg.ParseBackupFolder(val)
-
 		if err != nil {
-			b.Log.Error("Cannot parse", val)
+			b.Log.Warning("Cannot parse", val, "with an error", err.Error())
 			continue
 		}
+		if obj.FolderName == folder {
+			sameFolderName = append(sameFolderName, obj.ZipFileName)
+		}
+	}
 
-		// Delete backup if have the same name folder and the time is below max time
-		if (obj.FolderName == folder) && (obj.Time.Unix() < maxTime.Unix()) {
-			err := b.S3.DeleteObject(val)
+	// Check if we need to delete file
+	if len(sameFolderName) <= b.MaxRollbackDay {
+		b.Log.Info("skipping deleting older backup for", folder)
+		return
+	}
 
-			if err != nil {
-				b.Log.Error("Cannot delete object", val)
-				continue
-			}
+	// Sort string with an assumption of the filename are time sortable
+	sort.Strings(sameFolderName)
+
+	// Get objects to be deleted
+	deletedObjects := pkg.GetFirstKString(len(sameFolderName)-b.MaxRollbackDay, sameFolderName)
+
+	// Delete the objects
+	for _, v := range deletedObjects {
+		err := b.S3.DeleteObject(v)
+		if err != nil {
+			b.Log.Error("cannot delete object with an error:", err.Error())
+			return
 		}
 	}
 
@@ -116,20 +137,25 @@ func (b *BackupService) backupFolder(folder string, currentTime time.Time) error
 	backupFile := pkg.CreateBackupFolder(folder, currentTime)
 
 	b.Log.Info("Starting zipping folder " + backupFile.FolderName)
-	sourceFolderPath := b.Path + "/" + backupFile.FolderName
-	tempPath := "./temp/" + backupFile.ZipFileName
+	sourceFolderPath := filepath.Join(b.Path, backupFile.FolderName)
+	tempPath := filepath.Join("temp", backupFile.ZipFileName)
 
 	// Zip folder
 	err := pkg.ZipSource(sourceFolderPath, tempPath)
+
+	// Zip temp cleanup
+	defer func() {
+		err := os.Remove(tempPath)
+		if err != nil {
+			b.Log.Fatal("Cannot delete temporary file of " + tempPath)
+		}
+		b.Log.Info("Removing temporary file " + tempPath)
+	}()
+
 	if err != nil {
 		b.Log.Error("Cannot zip folder " + backupFile.FolderName + " " + err.Error())
 		return err
 	}
-
-	// Zip temp cleanup
-	defer func() {
-		os.Remove(tempPath)
-	}()
 
 	b.Log.Info("Success zip " + backupFile.ZipFileName + " and trying to upload")
 
