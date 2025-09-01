@@ -9,8 +9,8 @@ env:
   TAGS: ${{ github.sha }}
   
   # Please fill this
-  DOCKER_REPOSITORY: s3-schedule-backup
-  DOCKER_REGISTRY: docker.io/kaenova
+  DOCKER_REPOSITORY: kaenova/s3-schedule-backup
+  DOCKER_REGISTRY: docker.io
 
 jobs: 
   GoTest:
